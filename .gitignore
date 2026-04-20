@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+
+# Dataset (RẤT QUAN TRỌNG)
+dataset/
+
+# Flutter
+.metadata
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# OS
+.DS_Store
+Thumbs.db
