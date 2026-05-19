@@ -1,0 +1,5 @@
+1. Chạy lệnh cmd: `ipconfig` để kiểm tra IP máy tính
+2. Sau đó lấy ID đó (có dạng 192.168.x.x1) paste vào file main.dart
+   - Lưu ý điện thoại và máy tính phải cùng WiFi
+3. Test kết nối từ điện thoại
+   - Mở trình duyệt trên điện thoại và truy cập: http://192.168.x.x:8000

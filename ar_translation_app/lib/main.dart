@@ -133,7 +133,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 // ── Địa chỉ backend Python ─────────────────────────
 // Đổi thành IP máy tính của bạn (xem bằng lệnh ipconfig)
-const String API_URL = "http://192.168.1.8:8000";
+const String API_URL = "http://192.168.1.7:8000";
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -406,28 +406,51 @@ class _HomeScreenState extends State<HomeScreen> {
             const Divider(color: Colors.grey, height: 1),
         itemBuilder: (context, index) {
           final t = _translations[index];
-          return ListTile(
-            dense: true,
-            leading: CircleAvatar(
-              backgroundColor: Colors.green.shade700,
-              radius: 12,
-              child: Text(
-                '${index + 1}',
-                style: const TextStyle(
-                    fontSize: 10, color: Colors.white),
-              ),
-            ),
-            title: Text(
-              t['original'],
-              style: const TextStyle(
-                  color: Colors.grey, fontSize: 12),
-            ),
-            trailing: Text(
-              t['translated'],
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold),
+          return Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: 12, vertical: 6),
+            child: Row(
+              children: [
+                // Số thứ tự
+                CircleAvatar(
+                  backgroundColor: Colors.green.shade700,
+                  radius: 12,
+                  child: Text(
+                    '${index + 1}',
+                    style: const TextStyle(
+                        fontSize: 10, color: Colors.white),
+                  ),
+                ),
+                const SizedBox(width: 8),
+
+                // Cột text — dùng Expanded để tránh tràn
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Text gốc tiếng Anh
+                      Text(
+                        t['original'] ?? '',
+                        style: const TextStyle(
+                            color: Colors.grey, fontSize: 11),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                      const SizedBox(height: 2),
+                      // Text đã dịch tiếng Việt
+                      Text(
+                        t['translated'] ?? '',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           );
         },

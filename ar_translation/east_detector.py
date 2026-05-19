@@ -12,10 +12,8 @@ class EASTDetector:
         ]
         print("✅ EAST model loaded!")
 
-    def detect(self, image, min_confidence=0.4):
+    def detect(self, image, min_confidence=0.3):
         orig_H, orig_W = image.shape[:2]
-
-        # Resize về bội số 32
         newW = (orig_W // 32) * 32
         newH = (orig_H // 32) * 32
         rW = orig_W / float(newW)
@@ -82,32 +80,23 @@ class EASTDetector:
         return boxes, confidences
 
     def merge_boxes(self, boxes, image_shape,
-                    pad_x=20, pad_y=8, merge_gap=40):
-        """
-        Chuyển rotated boxes → axis-aligned rects có padding,
-        sau đó gộp các box trên cùng dòng lại với nhau.
-        """
+                    pad_x=50, pad_y=10, merge_gap=30):
         if not boxes:
             return []
 
         H, W = image_shape[:2]
-
-        # ── Bước 1: Chuyển sang rect + padding ──────────────
         rects = []
         for box in boxes:
             pts = cv2.boxPoints(box).astype(np.int32)
             x, y, w, h = cv2.boundingRect(pts)
-
             x1 = max(0, x - pad_x)
             y1 = max(0, y - pad_y)
             x2 = min(W, x + w + pad_x)
             y2 = min(H, y + h + pad_y)
             rects.append([x1, y1, x2, y2])
 
-        # ── Bước 2: Sắp xếp trên xuống, trái sang phải ──────
         rects.sort(key=lambda r: (r[1], r[0]))
 
-        # ── Bước 3: Gộp các box trên cùng dòng ──────────────
         merged = []
         used   = [False] * len(rects)
 
@@ -125,13 +114,10 @@ class EASTDetector:
                 ax1, ay1, ax2, ay2 = rects[j]
                 h_j = ay2 - ay1
 
-                # Cùng dòng: tâm Y của 2 box không cách nhau quá 1 chiều cao
                 center_i = (y1 + y2) / 2
                 center_j = (ay1 + ay2) / 2
                 same_line = abs(center_i - center_j) < max(h_i, h_j) * 0.6
-
-                # Đủ gần theo chiều ngang
-                close_x = (ax1 - x2) < merge_gap and (x1 - ax2) < merge_gap
+                close_x   = (ax1 - x2) < merge_gap and (x1 - ax2) < merge_gap
 
                 if same_line and close_x:
                     x1 = min(x1, ax1)
@@ -144,6 +130,49 @@ class EASTDetector:
             used[i] = True
 
         return merged
+
+    def auto_merge_boxes(self, boxes, image_shape):
+        """
+        Tự động tính pad_x, pad_y, merge_gap
+        dựa trên kích thước THỰC TẾ của các box detect được
+        → Hoạt động tốt với mọi kích thước ảnh/chữ
+        """
+        if not boxes:
+            return []
+
+        # ── Bước 1: Đo chiều cao & rộng thực của từng box ──
+        heights = []
+        widths  = []
+        for box in boxes:
+            pts = cv2.boxPoints(box).astype(np.int32)
+            _, _, w, h = cv2.boundingRect(pts)
+            heights.append(h)
+            widths.append(w)
+
+        # Dùng median để tránh bị ảnh hưởng bởi box quá to/nhỏ
+        avg_h = float(np.median(heights))
+        avg_w = float(np.median(widths))
+
+        # ── Bước 2: Tính thông số tự động ──────────────────
+        # pad_x: đủ để ôm trọn 1 từ (~ 1.2x chiều cao chữ)
+        pad_x = int(avg_h * 1.2)
+
+        # pad_y: nhỏ thôi để không gộp 2 dòng (~ 0.25x chiều cao)
+        pad_y = int(avg_h * 0.25)
+
+        # merge_gap: gộp các box cùng dòng cách nhau < 1 khoảng chữ
+        # Khoảng cách ký tự thường ~ 0.5x chiều cao chữ
+        merge_gap = int(avg_h * 0.5)
+
+        print(f"  📐 Thống kê box: avg_h={avg_h:.1f}px, avg_w={avg_w:.1f}px")
+        print(f"  ⚙️  Auto params: pad_x={pad_x}, pad_y={pad_y}, merge_gap={merge_gap}")
+
+        return self.merge_boxes(
+            boxes, image_shape,
+            pad_x=pad_x,
+            pad_y=pad_y,
+            merge_gap=merge_gap
+        )
 
     def draw_merged_boxes(self, image, merged_boxes):
         result = image.copy()

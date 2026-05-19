@@ -36,8 +36,8 @@ def test_translate_image(image_path="test_image.jpg"):
     img_bytes = base64.b64decode(data["image_base64"])
     np_arr    = np.frombuffer(img_bytes, np.uint8)
     result    = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-    cv2.imwrite("result_api.jpg", result)
-    print("\n💾 Đã lưu ảnh kết quả: result_api.jpg")
+    cv2.imwrite("result-test_image.jpg", result)
+    print("\n💾 Đã lưu ảnh kết quả: result-test_image.jpg")
 
     cv2.imshow("API Result", result)
     cv2.waitKey(0)

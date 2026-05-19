@@ -24,7 +24,7 @@ app.add_middleware(
 
 # ── Load models 1 lần khi server khởi động ────────────
 print("⏳ Đang khởi động server...")
-detector   = EASTDetector()
+# detector   = EASTDetector()
 ocr        = OCREngine(languages=['en'])
 translator = Translator(source_lang='en', target_lang='vi')
 overlay    = AROverlay(font_path="fonts/arial.ttf")
@@ -67,18 +67,35 @@ async def translate_image(
             raise HTTPException(status_code=400,
                                 detail="Không đọc được ảnh!")
 
-        print(f"\n📥 Nhận ảnh: {image.shape[1]}x{image.shape[0]}")
+        # print(f"\n📥 Nhận ảnh: {image.shape[1]}x{image.shape[0]}")
 
         # ── Bước 2: Detect + Merge ────────────────────
-        boxes  = detector.detect(image, min_confidence=0.3)
-        merged = detector.merge_boxes(
-            boxes, image.shape,
-            pad_x=50, pad_y=10, merge_gap=30
-        )
-        print(f"🔍 Detect: {len(merged)} vùng chữ")
+        # boxes  = detector.detect(image, min_confidence=0.3)
+        # # MỚI — tự động
+        # merged = detector.auto_merge_boxes(boxes, image.shape)
+        # print(f"🔍 Detect: {len(merged)} vùng chữ")
 
-        if len(merged) == 0:
-            # Không tìm thấy chữ → trả về ảnh gốc
+        # if len(merged) == 0:
+        #     # Không tìm thấy chữ → trả về ảnh gốc
+        #     _, buffer = cv2.imencode(".jpg", image)
+        #     img_b64   = base64.b64encode(buffer).decode("utf-8")
+        #     return JSONResponse({
+        #         "status":        "no_text",
+        #         "message":       "Không tìm thấy chữ trong ảnh!",
+        #         "regions_found": 0,
+        #         "image_base64":  img_b64
+        #     })
+
+
+
+        # HƯỚNG 2: EasyOCR quét toàn ảnh
+        print(f"\n📥 Nhận ảnh: {image.shape[1]}x{image.shape[0]}")
+
+        print("📖 Đang OCR toàn ảnh...")
+        ocr_results = ocr.recognize_full_image(image)
+        print(f"✅ Nhận dạng được {len(ocr_results)} vùng")
+
+        if len(ocr_results) == 0:
             _, buffer = cv2.imencode(".jpg", image)
             img_b64   = base64.b64encode(buffer).decode("utf-8")
             return JSONResponse({
@@ -91,7 +108,8 @@ async def translate_image(
         # ── Bước 3: OCR ───────────────────────────────
         translator.source_lang = source_lang
         translator.target_lang = target_lang
-        ocr_results = ocr.recognize_all(image, merged)
+        # ocr_results = ocr.recognize_all(image, merged)
+        ocr_results = ocr.recognize_full_image(image)
         print(f"📖 OCR: {len(ocr_results)} vùng có chữ")
 
         # ── Bước 4: Dịch thuật ────────────────────────
@@ -109,7 +127,7 @@ async def translate_image(
         # ── Trả về JSON ───────────────────────────────
         return JSONResponse({
             "status":        "success",
-            "regions_found": len(merged),
+            "regions_found": len(ocr_results),
             "regions_translated": len(translated_results),
             "translations": [
                 {
@@ -145,13 +163,33 @@ async def translate_text_only(
     if image is None:
         raise HTTPException(status_code=400, detail="Không đọc được ảnh!")
 
-    boxes  = detector.detect(image, min_confidence=0.3)
-    merged = detector.merge_boxes(
-        boxes, image.shape,
-        pad_x=50, pad_y=10, merge_gap=30
-    )
+    # boxes  = detector.detect(image, min_confidence=0.3)
+    # merged = detector.merge_boxes(
+    #     boxes, image.shape,
+    #     pad_x=50, pad_y=10, merge_gap=30
+    # )
 
-    ocr_results        = ocr.recognize_all(image, merged)
+    # ocr_results        = ocr.recognize_all(image, merged)
+
+
+
+
+    # HƯỚNG SỐ 2: EasyOCR quét toàn ảnh
+    print(f"\n📥 Nhận ảnh: {image.shape[1]}x{image.shape[0]}")
+
+    print("📖 Đang OCR toàn ảnh...")
+    ocr_results = ocr.recognize_full_image(image)
+    print(f"✅ Nhận dạng được {len(ocr_results)} vùng")
+
+    if len(ocr_results) == 0:
+        _, buffer = cv2.imencode(".jpg", image)
+        img_b64   = base64.b64encode(buffer).decode("utf-8")
+        return JSONResponse({
+            "status":        "no_text",
+            "message":       "Không tìm thấy chữ trong ảnh!",
+            "regions_found": 0,
+            "image_base64":  img_b64
+        })
     translated_results = translator.translate_all(ocr_results)
 
     return JSONResponse({

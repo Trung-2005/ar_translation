@@ -1,6 +1,7 @@
 # translator.py
 import requests
 import time
+import re
 
 class Translator:
     def __init__(self, source_lang='en', target_lang='vi'):
@@ -9,21 +10,49 @@ class Translator:
         # Cache lưu kết quả dịch — tránh gọi API lặp lại
         self._cache = {}
 
+    def clean_text(self, text):
+        """Loại bỏ ký tự OCR sai và số giá tiền"""
+        # Xóa cụm số kiểu giá tiền: 75,000 / 85.000 / 80,o0
+        text = re.sub(r'\b\d[\d,\.\s]*\d\b', '', text)
+        # Xóa ký tự đặc biệt OCR hay nhầm
+        text = re.sub(r'[_@#\|\\\/\*~`]', '', text)
+        # Xóa khoảng trắng thừa
+        text = ' '.join(text.split())
+        return text.strip()
+
+    # def translate(self, text):
+    #     """Dịch 1 đoạn text, có cache"""
+    #     if not text or not text.strip():
+    #         return ""
+
+    #     # Kiểm tra cache trước
+    #     key = text.strip().lower()
+    #     if key in self._cache:
+    #         print(f"  💾 [cache] '{text}' → '{self._cache[key]}'")
+    #         return self._cache[key]
+
+    #     result = self._call_mymemory(text)
+
+    #     # Lưu vào cache
+    #     # Normalize: chỉ viết hoa chữ cái đầu câu
+    #     result = result.capitalize()
+    #     self._cache[key] = result
+    #     return result
+
     def translate(self, text):
-        """Dịch 1 đoạn text, có cache"""
         if not text or not text.strip():
             return ""
 
-        # Kiểm tra cache trước
-        key = text.strip().lower()
+        # Làm sạch trước khi dịch
+        cleaned = self.clean_text(text)
+        if not cleaned or len(cleaned) < 3:
+            return text  # quá ngắn sau khi clean → bỏ qua
+
+        key = cleaned.lower()
         if key in self._cache:
-            print(f"  💾 [cache] '{text}' → '{self._cache[key]}'")
             return self._cache[key]
 
-        result = self._call_mymemory(text)
-
-        # Lưu vào cache
-        # Normalize: chỉ viết hoa chữ cái đầu câu
+        result = self._call_mymemory(cleaned)
         result = result.capitalize()
         self._cache[key] = result
         return result
