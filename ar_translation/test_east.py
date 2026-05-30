@@ -11,14 +11,14 @@ if image is None:
 
 print(f"📐 Kích thước ảnh: {image.shape[1]}x{image.shape[0]}")
 
-boxes = detector.detect(image, min_confidence=0.3)  # hạ xuống 0.3 để bắt thêm box
+boxes = detector.detect(image, min_confidence=0.3)
 print(f"🔍 Raw boxes  : {len(boxes)}")
 
 merged = detector.merge_boxes(
     boxes, image.shape,
-    pad_x=50,      # ← tăng từ 20 lên 50
-    pad_y=10,      # ← tăng từ 8 lên 10
-    merge_gap=30   # ← tăng từ 40 lên 60
+    pad_x=50,
+    pad_y=10,
+    merge_gap=30
 )
 print(f"📦 Sau merge  : {len(merged)}")
 

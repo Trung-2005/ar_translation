@@ -20,25 +20,6 @@ class Translator:
         text = ' '.join(text.split())
         return text.strip()
 
-    # def translate(self, text):
-    #     """Dịch 1 đoạn text, có cache"""
-    #     if not text or not text.strip():
-    #         return ""
-
-    #     # Kiểm tra cache trước
-    #     key = text.strip().lower()
-    #     if key in self._cache:
-    #         print(f"  💾 [cache] '{text}' → '{self._cache[key]}'")
-    #         return self._cache[key]
-
-    #     result = self._call_mymemory(text)
-
-    #     # Lưu vào cache
-    #     # Normalize: chỉ viết hoa chữ cái đầu câu
-    #     result = result.capitalize()
-    #     self._cache[key] = result
-    #     return result
-
     def translate(self, text):
         if not text or not text.strip():
             return ""

@@ -4,6 +4,7 @@ import numpy as np
 
 class EASTDetector:
     def __init__(self, model_path="models/frozen_east_text_detection.pb"):
+        """Khởi tạo EAST text detector"""
         print("⏳ Đang load EAST model...")
         self.net = cv2.dnn.readNet(model_path)
         self.layer_names = [
@@ -51,6 +52,7 @@ class EASTDetector:
         return results
 
     def _decode(self, scores, geometry, min_confidence):
+        """Giải mã output của EAST thành các box và confidence"""
         num_rows, num_cols = scores.shape[2:4]
         boxes, confidences = [], []
 

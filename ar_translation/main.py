@@ -25,7 +25,7 @@ app.add_middleware(
 # ── Load models 1 lần khi server khởi động ────────────
 print("⏳ Đang khởi động server...")
 # detector   = EASTDetector()
-ocr        = OCREngine(languages=['en'])
+ocr        = OCREngine(languages=['en']) # ocr = OCREngine(languages=['en', 'ja', 'ko', 'ch_sim'])
 translator = Translator(source_lang='en', target_lang='vi')
 overlay    = AROverlay(font_path="fonts/arial.ttf")
 print("✅ Server sẵn sàng!")
@@ -64,12 +64,14 @@ async def translate_image(
         image    = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
         if image is None:
-            raise HTTPException(status_code=400,
-                                detail="Không đọc được ảnh!")
+            raise HTTPException(
+                status_code=400,
+                detail="Không đọc được ảnh!"
+            )
 
-        # print(f"\n📥 Nhận ảnh: {image.shape[1]}x{image.shape[0]}")
+        print(f"\n📥 Nhận ảnh: {image.shape[1]}x{image.shape[0]}")
 
-        # ── Bước 2: Detect + Merge ────────────────────
+   
         # boxes  = detector.detect(image, min_confidence=0.3)
         # # MỚI — tự động
         # merged = detector.auto_merge_boxes(boxes, image.shape)
@@ -89,8 +91,6 @@ async def translate_image(
 
 
         # HƯỚNG 2: EasyOCR quét toàn ảnh
-        print(f"\n📥 Nhận ảnh: {image.shape[1]}x{image.shape[0]}")
-
         print("📖 Đang OCR toàn ảnh...")
         ocr_results = ocr.recognize_full_image(image)
         print(f"✅ Nhận dạng được {len(ocr_results)} vùng")
@@ -105,23 +105,25 @@ async def translate_image(
                 "image_base64":  img_b64
             })
 
-        # ── Bước 3: OCR ───────────────────────────────
-        translator.source_lang = source_lang
-        translator.target_lang = target_lang
+        # ── OCR ──────────────────────────────
         # ocr_results = ocr.recognize_all(image, merged)
+
         ocr_results = ocr.recognize_full_image(image)
         print(f"📖 OCR: {len(ocr_results)} vùng có chữ")
 
-        # ── Bước 4: Dịch thuật ────────────────────────
+        # ── Dịch thuật ────────────────────────
+        translator.source_lang = source_lang
+        translator.target_lang = target_lang
         translated_results = translator.translate_all(ocr_results)
         print(f"🌐 Đã dịch {len(translated_results)} vùng")
 
-        # ── Bước 5: AR Overlay ────────────────────────
+        # ── AR Overlay ────────────────────────
         result_image = overlay.draw_all(image, translated_results, shrink=4)
 
         # ── Encode ảnh kết quả → base64 ───────────────
-        _, buffer = cv2.imencode(".jpg", result_image,
-                                 [cv2.IMWRITE_JPEG_QUALITY, 90])
+        _, buffer = cv2.imencode(
+            ".jpg", result_image,
+            [cv2.IMWRITE_JPEG_QUALITY, 90])
         img_b64 = base64.b64encode(buffer).decode("utf-8")
 
         # ── Trả về JSON ───────────────────────────────
@@ -182,13 +184,9 @@ async def translate_text_only(
     print(f"✅ Nhận dạng được {len(ocr_results)} vùng")
 
     if len(ocr_results) == 0:
-        _, buffer = cv2.imencode(".jpg", image)
-        img_b64   = base64.b64encode(buffer).decode("utf-8")
         return JSONResponse({
             "status":        "no_text",
-            "message":       "Không tìm thấy chữ trong ảnh!",
-            "regions_found": 0,
-            "image_base64":  img_b64
+            "message":       "Không tìm thấy chữ trong ảnh!"
         })
     translated_results = translator.translate_all(ocr_results)
 

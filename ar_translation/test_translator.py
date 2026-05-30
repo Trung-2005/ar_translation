@@ -43,8 +43,8 @@ for i, r in enumerate(translated_results):
     print()
 
 # ── Test cache: dịch lại lần 2 (phải dùng cache) ──────
-print("🔁 Test cache — dịch lại 'Fried shrimp':")
+print("Test cache — dịch lại 'Fried shrimp':")
 result2 = translator.translate("Fried shrimp")
 print(f"   Kết quả: '{result2}'")
 
-print("\n✅ Bước 4 hoàn thành!")
+print("\nBước 4 hoàn thành!")
