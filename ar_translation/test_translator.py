@@ -6,7 +6,7 @@ from translator    import Translator
 
 # ── Khởi tạo ──────────────────────────────────────────
 detector   = EASTDetector()
-ocr        = OCREngine(languages=['en'])
+ocr        = OCREngine()  # Mặc định: Anh + Trung + Nhật + Hàn
 translator = Translator(source_lang='en', target_lang='vi')
 
 # ── Đọc ảnh ───────────────────────────────────────────

@@ -25,10 +25,16 @@ app.add_middleware(
 # ── Load models 1 lần khi server khởi động ────────────
 print("⏳ Đang khởi động server...")
 # detector   = EASTDetector()
-ocr        = OCREngine(languages=['en']) # ocr = OCREngine(languages=['en', 'ja', 'ko', 'ch_sim'])
+ocr        = OCREngine()  # Mặc định: tiếng Anh
 translator = Translator(source_lang='en', target_lang='vi')
 overlay    = AROverlay(font_path="fonts/arial.ttf")
 print("✅ Server sẵn sàng!")
+
+
+def _resolve_ocr_langs(source_lang: str):
+    """Lấy EasyOCR codes từ source_lang. Mặc định: ['en']"""
+    return list(OCREngine.SOURCE_OCR.get(source_lang, OCREngine.DEFAULT_LANGS))
+
 
 # ══════════════════════════════════════════════════════
 # ENDPOINT 1: Health check
@@ -39,6 +45,7 @@ def health_check():
         "status": "running",
         "message": "AR Translation API đang hoạt động!"
     }
+
 
 # ══════════════════════════════════════════════════════
 # ENDPOINT 2: Dịch ảnh — trả về ảnh AR đã xử lý
@@ -70,27 +77,14 @@ async def translate_image(
             )
 
         print(f"\n📥 Nhận ảnh: {image.shape[1]}x{image.shape[0]}")
+        print(f"   source_lang={source_lang} → target_lang={target_lang}")
 
-   
-        # boxes  = detector.detect(image, min_confidence=0.3)
-        # # MỚI — tự động
-        # merged = detector.auto_merge_boxes(boxes, image.shape)
-        # print(f"🔍 Detect: {len(merged)} vùng chữ")
+        # ── Cấu hình OCR theo ngôn ngữ nguồn ───────────
+        ocr_langs = _resolve_ocr_langs(source_lang)
+        ocr.set_languages(ocr_langs)
+        print(f"   🔤 OCR languages: {ocr_langs}")
 
-        # if len(merged) == 0:
-        #     # Không tìm thấy chữ → trả về ảnh gốc
-        #     _, buffer = cv2.imencode(".jpg", image)
-        #     img_b64   = base64.b64encode(buffer).decode("utf-8")
-        #     return JSONResponse({
-        #         "status":        "no_text",
-        #         "message":       "Không tìm thấy chữ trong ảnh!",
-        #         "regions_found": 0,
-        #         "image_base64":  img_b64
-        #     })
-
-
-
-        # HƯỚNG 2: EasyOCR quét toàn ảnh
+        # ── OCR toàn ảnh ──────────────────────────────
         print("📖 Đang OCR toàn ảnh...")
         ocr_results = ocr.recognize_full_image(image)
         print(f"✅ Nhận dạng được {len(ocr_results)} vùng")
@@ -105,10 +99,6 @@ async def translate_image(
                 "image_base64":  img_b64
             })
 
-        # ── OCR ──────────────────────────────
-        # ocr_results = ocr.recognize_all(image, merged)
-
-        ocr_results = ocr.recognize_full_image(image)
         print(f"📖 OCR: {len(ocr_results)} vùng có chữ")
 
         # ── Dịch thuật ────────────────────────
@@ -148,6 +138,7 @@ async def translate_image(
         print(f"❌ Lỗi: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 # ══════════════════════════════════════════════════════
 # ENDPOINT 3: Chỉ trả về text dịch (không overlay)
 # Dùng khi Flutter tự vẽ UI
@@ -165,20 +156,15 @@ async def translate_text_only(
     if image is None:
         raise HTTPException(status_code=400, detail="Không đọc được ảnh!")
 
-    # boxes  = detector.detect(image, min_confidence=0.3)
-    # merged = detector.merge_boxes(
-    #     boxes, image.shape,
-    #     pad_x=50, pad_y=10, merge_gap=30
-    # )
-
-    # ocr_results        = ocr.recognize_all(image, merged)
-
-
-
-
-    # HƯỚNG SỐ 2: EasyOCR quét toàn ảnh
     print(f"\n📥 Nhận ảnh: {image.shape[1]}x{image.shape[0]}")
+    print(f"   source_lang={source_lang} → target_lang={target_lang}")
 
+    # ── Cấu hình OCR theo ngôn ngữ nguồn ───────────
+    ocr_langs = _resolve_ocr_langs(source_lang)
+    ocr.set_languages(ocr_langs)
+    print(f"   🔤 OCR languages: {ocr_langs}")
+
+    # ── OCR toàn ảnh ──────────────────────────────
     print("📖 Đang OCR toàn ảnh...")
     ocr_results = ocr.recognize_full_image(image)
     print(f"✅ Nhận dạng được {len(ocr_results)} vùng")
@@ -188,6 +174,10 @@ async def translate_text_only(
             "status":        "no_text",
             "message":       "Không tìm thấy chữ trong ảnh!"
         })
+
+    # ── Dịch thuật ────────────────────────────────
+    translator.source_lang = source_lang
+    translator.target_lang = target_lang
     translated_results = translator.translate_all(ocr_results)
 
     return JSONResponse({

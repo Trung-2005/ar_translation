@@ -6,7 +6,7 @@ from ocr_engine    import OCREngine
 
 # ── Khởi tạo ──────────────────────────────────────────
 detector = EASTDetector()
-ocr      = OCREngine(languages=['en'])
+ocr      = OCREngine()  # Mặc định: Anh + Trung + Nhật + Hàn
 
 # ── Đọc ảnh ───────────────────────────────────────────
 image = cv2.imread("test_image.jpg")

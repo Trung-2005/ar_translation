@@ -6,7 +6,7 @@ from translator  import Translator
 from ar_overlay  import AROverlay
 
 # ── HƯỚNG 2: Không cần EASTDetector nữa ──────────────
-ocr        = OCREngine(languages=['en'])
+ocr        = OCREngine()  # Mặc định: Anh + Trung + Nhật + Hàn
 translator = Translator(source_lang='en', target_lang='vi')
 overlay    = AROverlay(font_path="fonts/arial.ttf")
 

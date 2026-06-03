@@ -16,7 +16,7 @@ def test_translate_image(image_path="test_image.jpg"):
     print("\n── Test /translate-image ──────────────")
     with open(image_path, "rb") as f:
         files  = {"file": ("test_image.jpg", f, "image/jpeg")}
-        params = {"source_lang": "en", "target_lang": "vi"}
+        params = {"source_lang": "en", "target_lang": "vi", "ocr_langs": "en,ch_sim"}
         res    = requests.post(
             f"{API_URL}/translate-image",
             files=files,

@@ -1,17 +1,62 @@
 # ar_overlay.py
 import cv2
 import numpy as np
+import os
 from PIL import Image, ImageDraw, ImageFont
 
 class AROverlay:
+    # Danh sách font fallback cho CJK (Trung, Nhật, Hàn)
+    CJK_FONTS = [
+        "fonts/arial.ttf",
+        "fonts/msyh.ttf",
+        "fonts/simsun.ttc",
+        "C:/Windows/Fonts/msyh.ttc",        # Microsoft YaHei
+        "C:/Windows/Fonts/simsun.ttc",       # SimSun
+        "C:/Windows/Fonts/meiryo.ttc",       # Meiryo (Nhật)
+        "C:/Windows/Fonts/malgun.ttf",       # Malgun Gothic (Hàn)
+        "/System/Library/Fonts/PingFang.ttc", # macOS
+        "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc", # Linux
+    ]
+
     def __init__(self, font_path="fonts/arial.ttf"):
         self.font_path = font_path
+        self._cjk_font_path = self._find_cjk_font()
 
-    def _get_font(self, size):
+    def _find_cjk_font(self):
+        """Tìm font hỗ trợ CJK trên hệ thống"""
+        for fp in self.CJK_FONTS:
+            if os.path.exists(fp):
+                # print(f"✅ Tìm thấy CJK font: {fp}")
+                return fp
+        print("  ⚠️  Không tìm thấy CJK font — dùng Arial fallback")
+        return None
+
+    @staticmethod
+    def _has_cjk(text):
+        """Kiểm tra text có chứa ký tự CJK không"""
+        for ch in text:
+            cp = ord(ch)
+            # Hiragana, Katakana, CJK Unified Ideographs, Hangul
+            if (0x3040 <= cp <= 0x309F or   # Hiragana
+                0x30A0 <= cp <= 0x30FF or    # Katakana
+                0x4E00 <= cp <= 0x9FFF or    # CJK Unified
+                0xAC00 <= cp <= 0xD7AF or    # Hangul
+                0x3000 <= cp <= 0x303F or    # CJK Symbols
+                0xFF00 <= cp <= 0xFFEF):     # Fullwidth forms
+                return True
+        return False
+
+    def _get_font(self, size, text=""):
         try:
+            # Nếu text chứa CJK và có CJK font → dùng font đó
+            if self._has_cjk(text) and self._cjk_font_path:
+                return ImageFont.truetype(self._cjk_font_path, max(8, size))
             return ImageFont.truetype(self.font_path, max(8, size))
         except:
-            return ImageFont.load_default()
+            try:
+                return ImageFont.truetype(self.font_path, max(8, size))
+            except:
+                return ImageFont.load_default()
 
     def _fit_font_size(self, text, max_w, max_h, min_size=10):
         """Tìm font size lớn nhất vừa khít trong box"""
@@ -19,7 +64,7 @@ class AROverlay:
         dummy = Image.new("RGB", (1, 1))
         draw  = ImageDraw.Draw(dummy)
         while size > min_size:
-            font = self._get_font(size)
+            font = self._get_font(size, text)
             bbox = draw.textbbox((0, 0), text, font=font)
             tw   = bbox[2] - bbox[0]
             th   = bbox[3] - bbox[1]
@@ -65,7 +110,7 @@ class AROverlay:
         box_w = x2 - sx
         box_h = y2 - sy
         fs    = self._fit_font_size(translated_text, box_w, box_h)
-        font  = self._get_font(fs)
+        font  = self._get_font(fs, translated_text)
 
         img_pil = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
         draw    = ImageDraw.Draw(img_pil)
